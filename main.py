@@ -1,40 +1,38 @@
+import chardet
 import glob
-import nkf
 import os
 import shutil
+import sys
 
 input_dir= './input'
-backup_dir= './input_bak'
+output_dir= './output'
 
-def get_file_names():
-    return glob.glob(input_dir + '/**/*', recursive=True)
-    #file_dir_paths = os.listdir(input_dir)
-    #return [f for f in file_dir_paths if os.path.isfile(os.path.join(input_dir, f))]
+def get_file_names(dir):
+    return glob.glob(dir + '/**/*.*', recursive=True)
 
-def make_backup():
-    shutil.copytree(input_dir, backup_dir)
-
-def make_output_dir():
-    if os.path.isdir(backup_dir):
-        return
-    os.mkdir(backup_dir)
-    os.chmod(backup_dir, 0o777)
+# 強制コピー。output_dirが存在する場合は削除してからコピーする
+def make_copy(input_dir, output_dir):
+    if os.path.isdir(output_dir):
+        shutil.rmtree(output_dir)
+    shutil.copytree(input_dir, output_dir)
 
 # 上書き
 def write_to_utf8(path):
-    f = open(path, 'r')
-    str = f.read()
+    f = open(path, 'rb')
+    binary = f.read()
     f.close()
+    estimated = chardet.detect(binary)['encoding']
+    if (estimated == None):
+        sys.stderr.write('判定できず: ' + path + '\r\n')
+        return
+    str_utf8 = binary.decode(estimated)
 
-    str_utf8 = nkf.nkf('w', str)
     fout = open(path, 'w')
     fout.write(str_utf8)
     fout.close()
 
 if __name__ == '__main__':
-    make_backup()
-    #make_output_dir()
-    file_names = get_file_names()
-    print(file_names)
+    make_copy(input_dir, output_dir)
+    file_names = get_file_names(output_dir)
     for file_name in file_names:
         write_to_utf8(file_name)
